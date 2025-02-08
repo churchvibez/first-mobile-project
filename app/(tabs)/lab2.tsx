@@ -6,11 +6,10 @@ export default function LabTwo() {
   const [playerScore, setPlayerScore] = useState(0);
   const [appScore, setAppScore] = useState(0);
   const [result, setResult] = useState('');
-  const [winningScore, setWinningScore] = useState(5); // Default winning score
+  const [winningScore, setWinningScore] = useState(5);
 
   const choices = ['Rock', 'Paper', 'Scissors'];
 
-  // Function to handle the game logic
   const playGame = (playerChoice: string) => {
     const appChoice = choices[Math.floor(Math.random() * 3)];
     let message = '';
@@ -31,7 +30,6 @@ export default function LabTwo() {
 
     setResult(message);
 
-    // Check if either the player or the app has reached the winning score
     if (playerScore + 1 === winningScore) {
       Alert.alert('Game Over!', 'You won the game!');
       resetGame();
@@ -41,14 +39,12 @@ export default function LabTwo() {
     }
   };
 
-  // Function to reset the game scores
   const resetGame = () => {
     setPlayerScore(0);
     setAppScore(0);
     setResult('');
   };
 
-  // Function to adjust the winning score
   const changeWinningScore = () => {
     Alert.prompt(
       'Set Winning Score',
@@ -64,7 +60,7 @@ export default function LabTwo() {
             const score = parseInt(input ?? '');
             if (!isNaN(score) && score > 0) {
               setWinningScore(score);
-              resetGame(); // Reset the game after changing the score limit
+              resetGame();
             } else {
               Alert.alert('Invalid Input', 'Please enter a valid number.');
             }
@@ -77,12 +73,9 @@ export default function LabTwo() {
 
   return (
     <View style={styles.container}>
-      {/* Settings Button (Top Left) */}
       <TouchableOpacity onPress={changeWinningScore} style={styles.settingsButton}>
         <Ionicons name="settings-outline" size={30} color="white" />
       </TouchableOpacity>
-
-      {/* Reset Button (Top Right) */}
       <TouchableOpacity onPress={resetGame} style={styles.resetButton}>
         <Ionicons name="refresh-outline" size={30} color="white" />
       </TouchableOpacity>
@@ -91,22 +84,16 @@ export default function LabTwo() {
       <Text style={styles.result}>{result}</Text>
 
       <View style={styles.iconContainer}>
-        {/* Rock Button */}
         <TouchableOpacity onPress={() => playGame('Rock')}>
           <Ionicons name="bowling-ball-outline" size={70} color="white" />
         </TouchableOpacity>
-
-        {/* Paper Button */}
         <TouchableOpacity onPress={() => playGame('Paper')}>
           <Ionicons name="hand-right" size={70} color="white" />
         </TouchableOpacity>
-
-        {/* Scissors Button */}
         <TouchableOpacity onPress={() => playGame('Scissors')}>
           <Ionicons name="cut" size={70} color="white" />
         </TouchableOpacity>
       </View>
-
       <Text style={styles.score}>Player: {playerScore} - App: {appScore}</Text>
       <Text style={styles.winningScore}>Winning Score: {winningScore}</Text>
     </View>
@@ -119,7 +106,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#121212', // Optional background color for better contrast
+    backgroundColor: '#121212',
   },
   header: {
     fontSize: 24,

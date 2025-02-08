@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableWithoutFeedback, Keyboard, Alert, Button } from 'react-native';
-import { DOMParser } from 'xmldom'; // XML parser
-import { TextDecoder } from 'text-encoding';
-import { Picker } from '@react-native-picker/picker'; // Modal dropdown picker
+import { View, Text, TextInput, StyleSheet, TouchableWithoutFeedback, Keyboard, Alert } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { DOMParser } from 'xmldom';
+import iconv from 'iconv-lite';
+
+interface ExchangeRate {
+  nominal: number;
+  value: number;
+}
+
+type ExchangeRates = {
+  [currencyCode: string]: ExchangeRate;
+};
 
 export default function CurrencyConverter() {
-  const [currencies, setCurrencies] = useState([]); // Store currency options
-  const [fromCurrency, setFromCurrency] = useState('USD'); // Default from currency
-  const [toCurrency, setToCurrency] = useState('EUR'); // Default to currency
-  const [amount, setAmount] = useState(1); // Amount to convert
-  const [exchangeRates, setExchangeRates] = useState({});
-  const [result, setResult] = useState(null); // Result after conversion
+  const [currencies, setCurrencies] = useState<string[]>([]);
+  const [fromCurrency, setFromCurrency] = useState<string>('USD');
+  const [toCurrency, setToCurrency] = useState<string>('EUR');
+  const [amount, setAmount] = useState<string>("1");
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates>({});
+  const [result, setResult] = useState<string | null>(null);
 
-  // Fetch currency data from the Central Bank of Russia
   const fetchData = async () => {
     try {
       const response = await fetch('https://www.cbr.ru/scripts/XML_daily.asp');
@@ -21,33 +29,31 @@ export default function CurrencyConverter() {
         Alert.alert('Error', `Failed to fetch data. Status code: ${response.status}`);
         return;
       }
-
+  
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      const decoder = new TextDecoder('windows-1251');
-      const decodedText = decoder.decode(uint8Array);
-
-      // Parse XML
+      const buffer = Buffer.from(uint8Array);
+      const decodedText = iconv.decode(buffer, 'windows-1251');
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(decodedText, 'text/xml');
       const valutes = xmlDoc.getElementsByTagName('Valute');
-
-      // Extract currency data
-      let tempCurrencies = [];
-      let tempExchangeRates = {};
+  
+      let tempCurrencies: string[] = [];
+      let tempExchangeRates: ExchangeRates = {};
       for (let i = 0; i < valutes.length; i++) {
-        const charCode = valutes[i].getElementsByTagName('CharCode')[0].textContent;
-        const nominal = parseFloat(valutes[i].getElementsByTagName('Nominal')[0].textContent);
-        const value = parseFloat(valutes[i].getElementsByTagName('Value')[0].textContent.replace(',', '.'));
-
+        const charCode = valutes[i].getElementsByTagName('CharCode')[0].textContent!;
+        const nominal = parseFloat(valutes[i].getElementsByTagName('Nominal')[0].textContent!);
+        const value = parseFloat(
+          valutes[i].getElementsByTagName('Value')[0].textContent!.replace(',', '.')
+        );
+  
         tempCurrencies.push(charCode);
         tempExchangeRates[charCode] = { nominal, value };
       }
-
-      // Add RUB (Russian Ruble) to the list of currencies
+  
       tempCurrencies.push('RUB');
-      tempExchangeRates['RUB'] = { nominal: 1, value: 1 }; // 1 RUB = 1 RUB
-
+      tempExchangeRates['RUB'] = { nominal: 1, value: 1 };
+  
       setCurrencies(tempCurrencies);
       setExchangeRates(tempExchangeRates);
     } catch (error) {
@@ -56,33 +62,35 @@ export default function CurrencyConverter() {
     }
   };
 
-  // Perform the conversion
   const convertCurrency = () => {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) {
+      Alert.alert('Invalid Input', 'Please enter a valid number.');
+      return;
+    }
+
     if (!exchangeRates[fromCurrency] || !exchangeRates[toCurrency]) {
       Alert.alert('Error', 'Please select valid currencies.');
       return;
     }
-
+  
     const fromRate = exchangeRates[fromCurrency].value / exchangeRates[fromCurrency].nominal;
     const toRate = exchangeRates[toCurrency].value / exchangeRates[toCurrency].nominal;
-    const convertedAmount = (amount * fromRate) / toRate;
+    const convertedAmount = (numericAmount * fromRate) / toRate;
     
-    setResult(convertedAmount.toFixed(2)); // Display result rounded to 2 decimal places
+    setResult(convertedAmount.toFixed(2));
   };
 
-  // Trigger conversion whenever amount or currency changes
   useEffect(() => {
     if (amount && fromCurrency && toCurrency) {
       convertCurrency();
     }
   }, [amount, fromCurrency, toCurrency]);
 
-  // Fetch data on component mount
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Dismiss keyboard when tapping outside
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
@@ -92,22 +100,20 @@ export default function CurrencyConverter() {
       <View style={styles.container}>
         <Text style={styles.title}>Currency Converter</Text>
 
-        {/* Amount input */}
         <TextInput
           style={styles.input}
           placeholder="Amount"
-          keyboardType="numeric"
-          value={amount.toString()}
-          onChangeText={text => setAmount(parseFloat(text))}
-          returnKeyType="done"         // Add "Done" button on the keyboard
-          blurOnSubmit={true}          // Close keyboard on "Done"
-          onSubmitEditing={convertCurrency} // Trigger conversion on "Done"
+          keyboardType="decimal-pad"
+          value={amount}
+          onChangeText={text => setAmount(text)}
+          returnKeyType="done"
+          blurOnSubmit={true}
+          onSubmitEditing={convertCurrency}
         />
 
-        {/* From and To currency pickers wrapped in separate boxes */}
         <View style={styles.pickerContainer}>
           <View style={styles.pickerBox}>
-            <Text>From:</Text>
+            <Text style={styles.pickerLabel}>From:</Text>
             <Picker
               selectedValue={fromCurrency}
               style={styles.picker}
@@ -115,13 +121,13 @@ export default function CurrencyConverter() {
               mode="dropdown"
             >
               {currencies.map(currency => (
-                <Picker.Item key={currency} label={currency} value={currency} />
+                <Picker.Item key={currency} label={currency} value={currency} color="black" />
               ))}
             </Picker>
           </View>
 
           <View style={styles.pickerBox}>
-            <Text>To:</Text>
+            <Text style={styles.pickerLabel}>To:</Text>
             <Picker
               selectedValue={toCurrency}
               style={styles.picker}
@@ -129,13 +135,12 @@ export default function CurrencyConverter() {
               mode="dropdown"
             >
               {currencies.map(currency => (
-                <Picker.Item key={currency} label={currency} value={currency} />
+                <Picker.Item key={currency} label={currency} value={currency} color="black" />
               ))}
             </Picker>
           </View>
         </View>
 
-        {/* Display the result */}
         {result && (
           <Text style={styles.result}>
             {amount} {fromCurrency} = {result} {toCurrency}
@@ -158,6 +163,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
+    color: 'black',
   },
   input: {
     height: 40,
@@ -165,24 +171,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 20,
     paddingHorizontal: 10,
+    backgroundColor: 'white',
   },
   pickerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 20,
   },
   pickerBox: {
     flex: 1,
-    marginHorizontal: 10,
+    marginHorizontal: 5,
+  },
+  pickerLabel: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: 'black',
+    textAlign: 'center',
   },
   picker: {
-    height: 150,
+    height: 190,
     width: '100%',
-    marginBottom: 20,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 5,
   },
   result: {
-    marginTop: 55,
+    marginTop: 40,
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
+    color: 'black',
   },
 });

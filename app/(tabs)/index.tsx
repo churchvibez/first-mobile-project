@@ -1,19 +1,20 @@
 import React from 'react';
 import { View, Button, Alert, StyleSheet } from 'react-native';
+import { Buffer } from 'buffer';
+global.Buffer = global.Buffer || Buffer;
+
 
 export default function LabOne() {
-  // Function to show the welcome dialog
   const showWelcomeDialog = () => {
     Alert.alert(
-      "Welcome!", // Dialog title
-      "", // No message
-      [{ text: "OK", onPress: () => console.log("Dialog closed") }] // Close button
+      "Welcome!",
+      "",
+      [{ text: "OK", onPress: () => console.log("Dialog closed") }]
     );
   };
 
   return (
     <View style={styles.container}>
-      {/* Button to show the welcome message */}
       <Button title="Click Me" onPress={showWelcomeDialog} />
     </View>
   );

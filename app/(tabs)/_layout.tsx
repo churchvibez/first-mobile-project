@@ -7,7 +7,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 interface TabBarIconProps {
   color: string;
   focused: boolean;
-  size?: number; // if size is provided, otherwise you can omit it
+  size?: number;
 }
 
 export default function TabLayout() {
@@ -16,11 +16,10 @@ export default function TabLayout() {
   return (
     <Tabs
   screenOptions={{
-    tabBarActiveTintColor: 'black', // Set active icon color to black
+    tabBarActiveTintColor: 'black',
     headerShown: false,
   }}
 >
-  {/* Your tab screens */}
   <Tabs.Screen
     name="index"
     options={{
@@ -40,7 +39,7 @@ export default function TabLayout() {
       title: 'Lab 2',
       tabBarIcon: ({ color, focused, size }: TabBarIconProps) => (
         <TabBarIcon
-          name={focused ? 'code-slash' : 'code-slash-outline'}
+          name={focused ? 'game-controller' : 'game-controller-outline'}
           color={color}
           size={size}
         />
@@ -53,7 +52,7 @@ export default function TabLayout() {
       title: 'Lab 3',
       tabBarIcon: ({ color, focused, size }: TabBarIconProps) => (
         <TabBarIcon
-          name={focused ? 'home' : 'home-outline'}
+          name={focused ? 'cash' : 'cash-outline'}
           color={color}
           size={size}
         />
@@ -66,7 +65,7 @@ export default function TabLayout() {
       title: 'Lab 4',
       tabBarIcon: ({ color, focused, size }: TabBarIconProps) => (
         <TabBarIcon
-          name={focused ? 'home' : 'home-outline'}
+          name={focused ? 'camera' : 'camera-outline'}
           color={color}
           size={size}
         />

@@ -1,44 +1,59 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, FlatList, Image, StyleSheet, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  FlatList,
+  Image,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 
 export default function PhotoStorageApp() {
-  const [images, setImages] = useState([]); // Store images with metadata
-  const [title, setTitle] = useState(''); // Title input
-  const [description, setDescription] = useState(''); // Description input
-  const [tags, setTags] = useState(''); // Tags input
-  const [searchQuery, setSearchQuery] = useState(''); // Search input
+  const [images, setImages] = useState<
+    {
+      path: string;
+      title: string;
+      description: string;
+      tags: string[];
+    }[]
+  >([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [tags, setTags] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  // Open the camera to take a picture
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      alert('Permission to access camera is required!');
+      Alert.alert('Permission required', 'Permission to access camera is required!');
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync();
-    if (!result.cancelled) {
-      const savedImagePath = await saveImage(result.uri);
+    if (!result.canceled) {
+      const imageUri = result.assets[0].uri;
+      const savedImagePath = await saveImage(imageUri);
       if (savedImagePath) {
-        // Add image to the list with metadata (empty for now)
         setImages((prevImages) => [
           ...prevImages,
-          {
-            path: savedImagePath,
-            title: '',
-            description: '',
-            tags: [],
-          },
+          { path: savedImagePath, title: '', description: '', tags: [] },
         ]);
       }
     }
   };
 
-  // Save the image in the app's local directory
-  const saveImage = async (imageUri) => {
+  const saveImage = async (imageUri: string) => {
     const fileName = imageUri.split('/').pop();
+    if (!fileName) {
+      Alert.alert('Error', 'Could not determine file name.');
+      return;
+    }
     const newPath = `${FileSystem.documentDirectory}${fileName}`;
 
     try {
@@ -53,31 +68,48 @@ export default function PhotoStorageApp() {
     }
   };
 
-  // Add metadata (title, description, tags) to the last added image
-  const addMetadata = () => {
-    if (!title || !description || !tags) {
-      Alert.alert('Error', 'Please fill in all fields.');
-      return;
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    if (selectedIndex !== null) {
+      setImages((prevImages) => {
+        const updatedImages = [...prevImages];
+        updatedImages[selectedIndex] = {
+          ...updatedImages[selectedIndex],
+          title: newTitle,
+        };
+        return updatedImages;
+      });
     }
-
-    setImages((prevImages) => {
-      const updatedImages = [...prevImages];
-      const lastImage = updatedImages[updatedImages.length - 1];
-
-      lastImage.title = title;
-      lastImage.description = description;
-      lastImage.tags = tags.split(',').map(tag => tag.trim());
-
-      return updatedImages;
-    });
-
-    // Reset form fields after saving metadata
-    setTitle('');
-    setDescription('');
-    setTags('');
   };
 
-  // Search images by title, description, or tags
+  const handleDescriptionChange = (newDescription: string) => {
+    setDescription(newDescription);
+    if (selectedIndex !== null) {
+      setImages((prevImages) => {
+        const updatedImages = [...prevImages];
+        updatedImages[selectedIndex] = {
+          ...updatedImages[selectedIndex],
+          description: newDescription,
+        };
+        return updatedImages;
+      });
+    }
+  };
+
+  const handleTagsChange = (newTags: string) => {
+    setTags(newTags);
+    if (selectedIndex !== null) {
+      setImages((prevImages) => {
+        const updatedImages = [...prevImages];
+        updatedImages[selectedIndex] = {
+          ...updatedImages[selectedIndex],
+          tags: newTags.split(',').map((tag) => tag.trim()),
+        };
+        return updatedImages;
+      });
+    }
+  };
+
   const searchImages = () => {
     return images.filter((image) =>
       image.title.includes(searchQuery) ||
@@ -90,55 +122,61 @@ export default function PhotoStorageApp() {
     <View style={styles.container}>
       <Text style={styles.title}>Photo Storage App</Text>
 
-      {/* Button to open camera and take picture */}
       <Button title="Take a Picture" onPress={openCamera} />
 
-      {/* Title Input */}
       <TextInput
         style={styles.input}
         placeholder="Title"
+        placeholderTextColor="black"
         value={title}
-        onChangeText={(text) => setTitle(text)}
+        onChangeText={handleTitleChange}
       />
-
-      {/* Description Input */}
       <TextInput
         style={styles.input}
         placeholder="Description"
+        placeholderTextColor="black"
         value={description}
-        onChangeText={(text) => setDescription(text)}
+        onChangeText={handleDescriptionChange}
       />
-
-      {/* Tags Input */}
       <TextInput
         style={styles.input}
         placeholder="Tags (comma-separated)"
+        placeholderTextColor="black"
         value={tags}
-        onChangeText={(text) => setTags(text)}
+        onChangeText={handleTagsChange}
       />
 
-      {/* Button to add metadata */}
-      <Button title="Add Metadata" onPress={addMetadata} />
-
-      {/* Search Input */}
       <TextInput
         style={styles.input}
         placeholder="Search by title, description, or tags"
+        placeholderTextColor="black"
         value={searchQuery}
-        onChangeText={(text) => setSearchQuery(text)}
+        onChangeText={setSearchQuery}
       />
 
-      {/* Display the search results */}
       <FlatList
+        key="3"
         data={searchImages()}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.imageContainer}>
+        keyExtractor={(_, index) => index.toString()}
+        numColumns={3}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity
+            style={[
+              styles.imageContainer,
+              selectedIndex === index && styles.selectedImage,
+            ]}
+            onPress={() => {
+              setSelectedIndex(index);
+              setTitle(item.title);
+              setDescription(item.description);
+              setTags(item.tags.join(', '));
+            }}
+          >
             <Image source={{ uri: item.path }} style={styles.image} />
-            <Text>Title: {item.title}</Text>
-            <Text>Description: {item.description}</Text>
-            <Text>Tags: {item.tags.join(', ')}</Text>
-          </View>
+            <Text style={styles.imageText}>Title: {item.title}</Text>
+            <Text style={styles.imageText}>Desc: {item.description}</Text>
+            <Text style={styles.imageText}>Tags: {item.tags.join(', ')}</Text>
+          </TouchableOpacity>
         )}
       />
     </View>
@@ -149,30 +187,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'red',
+    color: 'black',
     marginBottom: 20,
     textAlign: 'center',
   },
   input: {
     height: 40,
-    color: 'red',
-    borderColor: 'gray',
+    color: 'black',
+    borderColor: 'black',
     borderWidth: 1,
     marginBottom: 20,
     paddingHorizontal: 10,
+    backgroundColor: '#fff',
   },
   imageContainer: {
-    marginBottom: 20,
+    flex: 1,
+    margin: 5,
+    alignItems: 'center',
+    maxWidth: '30%',
+  },
+  selectedImage: {
+    borderWidth: 2,
+    borderColor: 'blue',
   },
   image: {
-    color: 'red',
     width: 100,
     height: 100,
-    marginBottom: 10,
+    marginBottom: 5,
+  },
+  imageText: {
+    color: 'black',
+    fontSize: 12,
+    textAlign: 'center',
   },
 });
